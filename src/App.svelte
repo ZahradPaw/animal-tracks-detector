@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import YOLO from "@ultralytics/yolo";
+  import { Capacitor } from "@capacitor/core";
+  import { Filesystem, Directory } from '@capacitor/filesystem';
 
   // Рамка обнаруженного следа с названием вида
   interface Box {
@@ -202,11 +204,34 @@
   }
 
   // Загрузка результата в память
-  function downloadResult() {
+  async function downloadResult() {
     if (!annotatedImage) return;
+
+    const fileName = `detected_tracks_${Date.now()}.png`;
+
+    // Загрузка в нативной среде (android)
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const base64Data = annotatedImage.split(",")[1];
+
+        await Filesystem.writeFile({
+          path: fileName,
+          data: base64Data,
+          directory: Directory.Documents,
+          recursive: true,
+        });
+
+        alert("Изображение сохранено в папку Documents");
+      } catch (e: any) {
+        alert(`Ошибка сохранения: ${e.message}`);
+      }
+      return;
+    }
+
+    // Загрузка через браузер (веб)
     const link = document.createElement("a");
     link.href = annotatedImage;
-    link.download = `detected_tracks_${Date.now()}.png`;
+    link.download = fileName;
     link.click();
   }
 
